@@ -1,0 +1,85 @@
+/* ---------- Global Reset ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Nunito Sans", "Segoe UI", sans-serif;
+}
+
+/* ---------- Base Page ---------- */
+body {
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+  color: #1a1a1a;
+  min-height: 100vh;
+}
+
+/* ---------- Container ---------- */
+.app-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 128, 64, 0.1);
+}
+
+/* ---------- Title ---------- */
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  color: #15803d;
+  margin-bottom: 1.5rem;
+}
+
+/* ---------- Inputs ---------- */
+label {
+  display: block;
+  font-weight: 600;
+  color: #166534;
+  margin-bottom: 0.5rem;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #a7f3d0;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+input:focus {
+  border-color: #16a34a;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  background-color: #16a34a;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background-color: #15803d;
+  transform: translateY(-2px);
+}
+
+/* ---------- Card / Results ---------- */
+.card {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-top: 1rem;
+  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.05);
+}
+
+.card h2 {
+  color:
+}
