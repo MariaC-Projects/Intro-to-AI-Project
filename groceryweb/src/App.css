@@ -11,6 +11,9 @@ body {
   background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
   color: #1a1a1a;
   min-height: 100vh;
+  display: flex;
+  align-items: center;      /* vertical center */
+  justify-content: center;
 }
 
 /* ---------- Container ---------- */
@@ -21,6 +24,7 @@ body {
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 4px 16px rgba(0, 128, 64, 0.1);
+  align-items: center;
 }
 
 /* ---------- Title ---------- */
@@ -81,5 +85,5 @@ button:hover {
 }
 
 .card h2 {
-  color:
+  color: #15803d;
 }
