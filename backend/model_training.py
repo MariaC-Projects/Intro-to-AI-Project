@@ -5,6 +5,38 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 import joblib
+from pathlib import Path
+import pandas as pd
+
+HERE = Path(__file__).parent  # the backend folder
+
+# Try to find a data file automatically (CSV or Excel)
+candidates = [
+    HERE / "recipes.csv",
+    HERE / "recipes.xlsx",
+    HERE.parent / "recipes.csv",
+    HERE.parent / "recipes.xlsx",
+    *HERE.glob("Food*Recipe*Image*.csv"),
+    *HERE.glob("Food*Recipe*Image*.xlsx"),
+    *HERE.parent.glob("Food*Recipe*Image*.csv"),
+    *HERE.parent.glob("Food*Recipe*Image*.xlsx"),
+]
+
+DATA_FILE = next((p for p in candidates if p.exists()), None)
+if DATA_FILE is None:
+    raise FileNotFoundError(
+        "Could not find your dataset. Put 'recipes.csv' or 'recipes.xlsx' "
+        "in the backend folder, or keep the Kaggle file name and place it in backend."
+    )
+
+# Read depending on extension
+if DATA_FILE.suffix.lower() == ".csv":
+    df = pd.read_csv(DATA_FILE, encoding="utf-8-sig")
+else:
+    df = pd.read_excel(DATA_FILE)
+
+print(f"✅ Loaded data file: {DATA_FILE}  rows={len(df)}")
+
 
 # 1. Load dataset
 df = pd.read_csv("Food Ingredients and Recipe Dataset with Images.csv")
