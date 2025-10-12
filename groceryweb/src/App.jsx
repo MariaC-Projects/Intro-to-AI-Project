@@ -76,7 +76,19 @@ export default function App() {
             <tbody>
               {results.map((r, idx) => (
                 <tr key={idx}>
-                  <td>{r.recipe_name}</td>
+                  <td style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {r.image_url ? (
+                      <img
+                        src={API.replace(/\/$/, '') + r.image_url}
+                        alt={r.recipe_name}
+                        style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div style={{ width: 72, height: 72, background: '#eee', borderRadius: 8 }} />
+                    )}
+                    <div>{r.recipe_name}</div>
+                  </td>
                   <td style={{ maxWidth: 450 }}>{r.ingredients}</td>
                   <td>{r.similarity.toFixed(3)}</td>
                 </tr>
