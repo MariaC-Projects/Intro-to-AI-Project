@@ -64,6 +64,8 @@ def find_image_for_title(slug: str):
     return None
 
 df["image_file"] = df["title_slug"].apply(find_image_for_title)
+# assign a stable recipe id (use the dataframe index as id)
+df = df.reset_index().rename(columns={"index": "recipe_idx"})
 
 # ---------- FastAPI app ----------
 app = FastAPI(title="AI-Powered Grocery & Recipe Recommender")
@@ -104,9 +106,71 @@ def recommend(body: PantryInput):
         img_file = row.get("image_file")
         image_url = f"/images/{img_file}" if img_file else None
         results.append({
+            "recipe_id": int(row["recipe_idx"]),
             "recipe_name": row[title_col],
             "ingredients": row["Ingredients"],
+            "instructions": row.get("Instructions") if "Instructions" in row else None,
             "similarity": float(sims[i]),
             "image_url": image_url
         })
     return {"results": results}
+
+
+# ----- Favorites persistence (simple JSON file) -----
+FAV_FILE = HERE / "favorites.json"
+
+def load_favorites():
+    if not FAV_FILE.exists():
+        return []
+    try:
+        import json
+        with open(FAV_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_favorites(favs):
+    import json
+    with open(FAV_FILE, "w", encoding="utf-8") as f:
+        json.dump(favs, f, ensure_ascii=False, indent=2)
+
+
+@app.get("/favorites")
+def get_favorites():
+    favs = load_favorites()
+    # return the full recipe details for each favorite id
+    result = []
+    for rid in favs:
+        if rid in df["recipe_idx"].values:
+            row = df[df["recipe_idx"] == rid].iloc[0]
+            img_file = row.get("image_file")
+            image_url = f"/images/{img_file}" if img_file else None
+            result.append({
+                "recipe_id": int(row["recipe_idx"]),
+                "recipe_name": row[title_col],
+                "ingredients": row["Ingredients"],
+                "instructions": row.get("Instructions") if "Instructions" in row else None,
+                "image_url": image_url,
+            })
+    return {"favorites": result}
+
+
+@app.post("/favorites")
+def add_favorite(item: dict):
+    # expects JSON body: { "recipe_id": <int> }
+    favs = load_favorites()
+    rid = int(item.get("recipe_id"))
+    if rid not in favs:
+        favs.append(rid)
+        save_favorites(favs)
+    return {"favorites": favs}
+
+
+@app.delete("/favorites/{recipe_id}")
+def remove_favorite(recipe_id: int):
+    favs = load_favorites()
+    recipe_id = int(recipe_id)
+    if recipe_id in favs:
+        favs = [r for r in favs if r != recipe_id]
+        save_favorites(favs)
+    return {"favorites": favs}

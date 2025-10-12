@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -8,7 +8,16 @@ export default function App() {
   const [topK, setTopK] = useState(5);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    // load favorites from backend on mount
+    fetch(`${API}/favorites`).then((res) => res.json()).then((data) => {
+      setFavorites((data && data.favorites) || []);
+    }).catch(() => {});
+  }, []);
 
   async function recommend() {
     setLoading(true);
@@ -74,29 +83,119 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {results.map((r, idx) => (
-                <tr key={idx}>
-                  <td style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {r.image_url ? (
-                      <img
-                        src={API.replace(/\/$/, '') + r.image_url}
-                        alt={r.recipe_name}
-                        style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }}
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div style={{ width: 72, height: 72, background: '#eee', borderRadius: 8 }} />
-                    )}
-                    <div>{r.recipe_name}</div>
-                  </td>
-                  <td style={{ maxWidth: 450 }}>{r.ingredients}</td>
-                  <td>{r.similarity.toFixed(3)}</td>
-                </tr>
-              ))}
+              {results.map((r, idx) => {
+                const isFav = favorites.some((f) => f.recipe_id === r.recipe_id);
+                return (
+                  <tr key={idx}>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {r.image_url ? (
+                        <img
+                          src={API.replace(/\/$/, "") + r.image_url}
+                          alt={r.recipe_name}
+                          style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8, cursor: 'pointer' }}
+                          onClick={() => setSelectedRecipe(r)}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div style={{ width: 96, height: 96, background: '#eee', borderRadius: 8 }} />
+                      )}
+                      <div>
+                        <div>{r.recipe_name}</div>
+                        <div style={{ marginTop: 6 }}>
+                          {isFav ? (
+                            <button onClick={() => {
+                              // remove favorite
+                              fetch(`${API}/favorites/${r.recipe_id}`, { method: 'DELETE' })
+                                .then(res => res.json())
+                                .then(data => {
+                                  // update favorites detail list by refetching
+                                  return fetch(`${API}/favorites`).then(r => r.json());
+                                })
+                                .then(d => setFavorites(d.favorites || []))
+                                .catch(() => {});
+                            }}>Unsave</button>
+                          ) : (
+                            <button onClick={() => {
+                              fetch(`${API}/favorites`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ recipe_id: r.recipe_id })
+                              }).then(res => res.json())
+                                .then(() => fetch(`${API}/favorites`).then(r => r.json()))
+                                .then(d => setFavorites(d.favorites || []))
+                                .catch(() => {});
+                            }}>Save</button>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ maxWidth: 450 }}>{r.ingredients}</td>
+                    <td>{r.similarity.toFixed(3)}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <h2>Favorites</h2>
+        {favorites.length === 0 ? (
+          <p>No favorites yet. Save recipes from results above.</p>
+        ) : (
+          <ul>
+            {favorites.map((f) => (
+              <li key={f.recipe_id} style={{ marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
+                {f.image_url ? (
+                  <img src={API.replace(/\/$/, '') + f.image_url} alt={f.recipe_name} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, cursor: 'pointer' }} onClick={() => setSelectedRecipe(f)} />
+                ) : (
+                  <div style={{ width: 64, height: 64, background: '#eee', borderRadius: 6 }} />
+                )}
+                <div style={{ flex: 1 }}>
+                  <div>{f.recipe_name}</div>
+                  <div style={{ fontSize: 12, color: '#666' }}>{f.ingredients}</div>
+                </div>
+                <button onClick={() => {
+                  fetch(`${API}/favorites/${f.recipe_id}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(() => fetch(`${API}/favorites`).then(r => r.json()))
+                    .then(d => setFavorites(d.favorites || []))
+                    .catch(() => {});
+                }}>Remove</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Lightbox / modal for selected recipe */}
+      {selectedRecipe && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={() => setSelectedRecipe(null)}>
+          <div style={{ background: '#fff', borderRadius: 8, maxWidth: '90%', maxHeight: '90%', overflow: 'auto', padding: 20 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 16 }}>
+              {selectedRecipe.image_url ? (
+                <img src={API.replace(/\/$/, '') + selectedRecipe.image_url} alt={selectedRecipe.recipe_name} style={{ maxWidth: 420, maxHeight: '70vh', objectFit: 'cover', borderRadius: 8 }} />
+              ) : (
+                <div style={{ width: 420, height: 260, background: '#eee', borderRadius: 8 }} />
+              )}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ marginTop: 0 }}>{selectedRecipe.recipe_name}</h3>
+                <p style={{ whiteSpace: 'pre-wrap', color: '#333' }}>{selectedRecipe.ingredients}</p>
+                {selectedRecipe.instructions && (
+                  <div style={{ marginTop: 12 }}>
+                    <h4 style={{ margin: '8px 0' }}>Instructions</h4>
+                    <div style={{ whiteSpace: 'pre-wrap', color: '#222' }}>{selectedRecipe.instructions}</div>
+                  </div>
+                )}
+                <div style={{ marginTop: 12 }}>
+                  <button onClick={() => setSelectedRecipe(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
