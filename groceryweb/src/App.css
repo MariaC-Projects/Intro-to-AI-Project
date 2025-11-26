@@ -81,9 +81,31 @@ button:hover {
   border-radius: 12px;
   padding: 1rem 1.5rem;
   margin-top: 1rem;
-  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.05);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(21, 128, 61, 0.06);
+}
+
+.card + .card {
+  margin-top: 1.5rem;
 }
 
 .card h2 {
   color: #15803d;
+}
+
+/* ---------- Ingredients ---------- */
+.ingredients-cell {
+  max-width: 450px;
+}
+
+.ingredient-inline {
+  margin-top: 4px;
+  color: #1f2937;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.ingredient-inline.small {
+  font-size: 0.9rem;
+  color: #374151;
 }

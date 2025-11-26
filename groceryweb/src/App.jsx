@@ -3,6 +3,30 @@ import "./App.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+function normalizeIngredients(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map((i) => String(i).trim()).filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((i) => String(i).trim()).filter(Boolean);
+      }
+    } catch (_) {
+      // not JSON, fall back to string cleanup
+    }
+    return trimmed
+      .replace(/^\[|\]$/g, "")
+      .replace(/['"]/g, "")
+      .split(/\s*,\s*/)
+      .filter(Boolean)
+      .map((i) => i.trim());
+  }
+  return [];
+}
+
 export default function App() {
   const [pantry, setPantry] = useState("tomato, pasta, garlic");
   const [topK, setTopK] = useState(5);
@@ -85,6 +109,9 @@ export default function App() {
             <tbody>
               {results.map((r, idx) => {
                 const isFav = favorites.some((f) => f.recipe_id === r.recipe_id);
+                const ingredientsList = normalizeIngredients(r.ingredients);
+                const ingredientsText = ingredientsList.join(" • ");
+                const similarityPercent = `${((r.similarity || 0) * 100).toFixed(1)}%`;
                 return (
                   <tr key={idx}>
                     <td style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -129,8 +156,16 @@ export default function App() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ maxWidth: 450 }}>{r.ingredients}</td>
-                    <td>{r.similarity.toFixed(3)}</td>
+                    <td className="ingredients-cell">
+                      {ingredientsList.length ? (
+                        <div className="ingredient-inline">
+                          {ingredientsText}
+                        </div>
+                      ) : (
+                        <span style={{ color: '#666' }}>No ingredients listed</span>
+                      )}
+                    </td>
+                    <td>{similarityPercent}</td>
                   </tr>
                 )
               })}
@@ -145,26 +180,32 @@ export default function App() {
           <p>No favorites yet. Save recipes from results above.</p>
         ) : (
           <ul>
-            {favorites.map((f) => (
-              <li key={f.recipe_id} style={{ marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
-                {f.image_url ? (
-                  <img src={API.replace(/\/$/, '') + f.image_url} alt={f.recipe_name} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, cursor: 'pointer' }} onClick={() => setSelectedRecipe(f)} />
-                ) : (
-                  <div style={{ width: 64, height: 64, background: '#eee', borderRadius: 6 }} />
-                )}
-                <div style={{ flex: 1 }}>
-                  <div>{f.recipe_name}</div>
-                  <div style={{ fontSize: 12, color: '#666' }}>{f.ingredients}</div>
-                </div>
-                <button onClick={() => {
-                  fetch(`${API}/favorites/${f.recipe_id}`, { method: 'DELETE' })
-                    .then(res => res.json())
-                    .then(() => fetch(`${API}/favorites`).then(r => r.json()))
-                    .then(d => setFavorites(d.favorites || []))
-                    .catch(() => {});
-                }}>Remove</button>
-              </li>
-            ))}
+            {favorites.map((f) => {
+              const favIngredients = normalizeIngredients(f.ingredients);
+              const favText = favIngredients.join(" • ");
+              return (
+                <li key={f.recipe_id} style={{ marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
+                  {f.image_url ? (
+                    <img src={API.replace(/\/$/, '') + f.image_url} alt={f.recipe_name} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, cursor: 'pointer' }} onClick={() => setSelectedRecipe(f)} />
+                  ) : (
+                    <div style={{ width: 64, height: 64, background: '#eee', borderRadius: 6 }} />
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div>{f.recipe_name}</div>
+                    <div className="ingredient-inline small">
+                      {favIngredients.length ? favText : <span style={{ color: '#666', fontSize: 12 }}>No ingredients listed</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => {
+                    fetch(`${API}/favorites/${f.recipe_id}`, { method: 'DELETE' })
+                      .then(res => res.json())
+                      .then(() => fetch(`${API}/favorites`).then(r => r.json()))
+                      .then(d => setFavorites(d.favorites || []))
+                      .catch(() => {});
+                  }}>Remove</button>
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>
@@ -181,7 +222,9 @@ export default function App() {
               )}
               <div style={{ flex: 1 }}>
                 <h3 style={{ marginTop: 0 }}>{selectedRecipe.recipe_name}</h3>
-                <p style={{ whiteSpace: 'pre-wrap', color: '#333' }}>{selectedRecipe.ingredients}</p>
+                <div className="ingredient-inline" style={{ marginBottom: 8 }}>
+                  {normalizeIngredients(selectedRecipe.ingredients).join(" • ")}
+                </div>
                 {selectedRecipe.instructions && (
                   <div style={{ marginTop: 12 }}>
                     <h4 style={{ margin: '8px 0' }}>Instructions</h4>
