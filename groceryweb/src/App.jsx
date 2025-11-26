@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const FETCH_TIMEOUT_MS = 8000;
 
 function normalizeIngredients(raw) {
   if (Array.isArray(raw)) {
@@ -38,21 +39,47 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("results");
   const [shoppingList, setShoppingList] = useState([]);
 
+  async function fetchWithTimeout(url, options = {}, timeout = FETCH_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(id);
+    }
+  }
+
   useEffect(() => {
     // load favorites from backend on mount
-    fetch(`${API}/favorites`).then((res) => res.json()).then((data) => {
-      setFavorites((data && data.favorites) || []);
-    }).catch(() => {});
+    fetchWithTimeout(`${API}/favorites`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`API ${res.status}`))))
+      .then((data) => {
+        setFavorites((data && data.favorites) || []);
+      })
+      .catch((e) => {
+        setError((prev) => prev || `Could not reach API. ${e.message || ""}`.trim());
+      });
   }, []);
 
   async function recommend(customPantry) {
     setLoading(true);
     setError("");
     setResults([]);
-    const pantryValue = (customPantry ?? pantry).trim();
+    const pantryInput =
+      typeof customPantry === "string"
+        ? customPantry
+        : Array.isArray(customPantry)
+        ? customPantry.join(", ")
+        : pantry;
+    const pantryValue = pantryInput.trim();
+    if (!pantryValue) {
+      setError("Please enter pantry items first.");
+      setLoading(false);
+      return;
+    }
     setPantry(pantryValue);
     try {
-      const res = await fetch(`${API}/recommend`, {
+      const res = await fetchWithTimeout(`${API}/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pantry: pantryValue, top_k: Number(topK) || 5 }),
@@ -62,7 +89,12 @@ export default function App() {
       setResults(data.results || []);
       setActiveTab("results");
     } catch (e) {
-      setError(`Could not get recommendations. ${e.message}`);
+      const aborted = e && e.name === "AbortError";
+      setError(
+        aborted
+          ? "Request timed out. Is the backend running at the configured URL?"
+          : `Could not get recommendations. ${e.message}`
+      );
     } finally {
       setLoading(false);
     }
@@ -107,17 +139,17 @@ export default function App() {
 
         <label style={{ marginTop: 12 }}>How many recipes (Top-K)</label>
         <input
-          type="number"
-          min="1"
-          max="20"
-          value={topK}
-          onChange={(e) => setTopK(e.target.value)}
-          className="input-field"
-        />
+        type="number"
+        min="1"
+        max="20"
+        value={topK}
+        onChange={(e) => setTopK(e.target.value)}
+        className="input-field"
+      />
 
-        <button onClick={recommend} style={{ marginTop: 14 }}>
-          {loading ? "Finding recipes..." : "Recommend"}
-        </button>
+      <button onClick={() => recommend()} style={{ marginTop: 14 }}>
+        {loading ? "Finding recipes..." : "Recommend"}
+      </button>
 
         {error && <p style={{ color: "#b91c1c", marginTop: 12 }}>{error}</p>}
       </div>
