@@ -45,15 +45,17 @@ export default function App() {
     }).catch(() => {});
   }, []);
 
-  async function recommend() {
+  async function recommend(customPantry) {
     setLoading(true);
     setError("");
     setResults([]);
+    const pantryValue = (customPantry ?? pantry).trim();
+    setPantry(pantryValue);
     try {
       const res = await fetch(`${API}/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pantry, top_k: Number(topK) || 5 }),
+        body: JSON.stringify({ pantry: pantryValue, top_k: Number(topK) || 5 }),
       });
       if (!res.ok) throw new Error(`API ${res.status}`);
       const data = await res.json();
@@ -276,6 +278,13 @@ export default function App() {
                 </ul>
                 <div style={{ marginTop: 10 }}>
                   <button className="ghost" type="button" onClick={clearShoppingList}>Clear list</button>
+                  <button
+                    style={{ marginLeft: 8 }}
+                    onClick={() => recommend(shoppingList.join(", "))}
+                    disabled={loading || shoppingList.length === 0}
+                  >
+                    {loading ? "Recommending..." : "Recommend from shopping list"}
+                  </button>
                 </div>
               </>
             )}
