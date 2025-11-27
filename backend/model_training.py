@@ -91,7 +91,7 @@ def pick_columns(df: pd.DataFrame) -> pd.DataFrame:
 def train_vectorizer(text_series: pd.Series) -> TfidfVectorizer:
     vec = TfidfVectorizer(token_pattern=r"(?u)\b[\w\-]+\b", ngram_range=(1, 2), min_df=2)
     matrix = vec.fit_transform(text_series)
-    print(f"✅ Trained TF-IDF: vocab={len(vec.vocabulary_)}  shape={matrix.shape}")
+    print(f" Trained TF-IDF: vocab={len(vec.vocabulary_)}  shape={matrix.shape}")
     return vec, matrix
 
 
@@ -104,7 +104,7 @@ def save_artifacts(vec: TfidfVectorizer, matrix, meta: pd.DataFrame):
     except Exception:
         meta.to_csv(HERE / "recipes_metadata.csv", index=False, encoding="utf-8")
         saved_meta = "recipes_metadata.csv"
-    print(f"✅ Saved artifacts: tfidf_vectorizer.joblib, recipe_tfidf.npz, {saved_meta}")
+    print(f" Saved artifacts: tfidf_vectorizer.joblib, recipe_tfidf.npz, {saved_meta}")
 
 
 def main():
