@@ -1,11 +1,6 @@
-# backend/model_training.py
-import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-import joblib
+import re
 from pathlib import Path
+
 import pandas as pd
 
 HERE = Path(__file__).parent  # the backend folder
@@ -35,32 +30,31 @@ if DATA_FILE.suffix.lower() == ".csv":
 else:
     df = pd.read_excel(DATA_FILE)
 
-print(f"✅ Loaded data file: {DATA_FILE}  rows={len(df)}")
+print(f"? Loaded data file: {DATA_FILE}  rows={len(df)}")
+
+# ---------------------------------------------------------------------------
+# Keyword-based filtering instead of model training
+# ---------------------------------------------------------------------------
+KEYWORDS = ["low-fat", "vegan", "salad"]  # extend with any tags you need
 
 
-# 1. Load dataset
-df = pd.read_csv("Food Ingredients and Recipe Dataset with Images.csv")
-df.dropna(subset=["Ingredients"], inplace=True)
-df['Ingredients'] = df['Ingredients'].astype(str).str.lower()
+def filter_by_keywords(dataframe: pd.DataFrame, keywords) -> pd.DataFrame:
+    kw = [str(k).strip().lower() for k in keywords if str(k).strip()]
+    if not kw:
+        return dataframe.copy()
+    pattern = "|".join(re.escape(k) for k in kw)
+    # Keep rows whose Ingredients contain any of the keywords
+    return dataframe[dataframe["Ingredients"].astype(str).str.lower().str.contains(pattern, na=False)]
 
-# 2. Fake labels for demo (you can replace with real data later)
-import numpy as np
-df['label'] = np.random.randint(0, 2, len(df))
 
-# 3. Train TF-IDF + Logistic Regression
-vectorizer = TfidfVectorizer(max_features=2000)
-X = vectorizer.fit_transform(df['Ingredients'])
-y = df['label']
+# Clean and filter
+df = df.dropna(subset=["Ingredients"]).copy()
+df["Ingredients"] = df["Ingredients"].astype(str).str.lower()
+filtered = filter_by_keywords(df, KEYWORDS)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model = LogisticRegression(max_iter=200)
-model.fit(X_train, y_train)
+print(f"Recipes matching keywords ({', '.join(KEYWORDS)}): {len(filtered)} / {len(df)}")
 
-# 4. Evaluate
-y_pred = model.predict(X_test)
-print(classification_report(y_test, y_pred))
-
-# 5. Save model + vectorizer
-joblib.dump(model, "recipe_model.joblib")
-joblib.dump(vectorizer, "tfidf_vectorizer.joblib")
-print("✅ Model and vectorizer saved.")
+# Save filtered set so the API can load/use it
+out_path = HERE / "filtered_recipes.parquet"
+filtered.to_parquet(out_path, index=False)
+print(f"? Saved filtered recipes to {out_path}")
