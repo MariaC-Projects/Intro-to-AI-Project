@@ -112,7 +112,6 @@ export default function App() {
       });
       return next;
     });
-    setActiveTab("shopping");
   }
 
   function removeFromShoppingList(item) {
