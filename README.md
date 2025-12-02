@@ -4,6 +4,8 @@
 PantryChef is an AI-driven web application that recommends recipes based on the ingredients you already have at home.  
 It uses Natural Language Processing (TF–IDF vectorization + cosine similarity) to match your pantry items with the most relevant recipes from a dataset of ~13,000 recipes.
 
+Link for Presentation and Slides: https://drive.google.com/drive/folders/13wKEiGZXcPGe7NkelWh8slM3nRaGVM7u
+
 ---
 ## Features
 - Ingredient-based recipe recommendations  
